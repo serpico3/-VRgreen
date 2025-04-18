@@ -7,33 +7,42 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        * {
+            box-sizing: border-box;
+        }
+        
         body {
             margin: 0;
             padding: 0;
             font-family: 'Arial', sans-serif;
             color: #333;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         
         header {
             background-color: #003366;
             color: white;
-            padding: 20px;
-            text-align: center;
+            padding: 15px 20px;
+            flex-shrink: 0;
         }
         
         h1 {
             margin: 0;
-            font-size: 2.2em;
+            font-size: 1.8em;
         }
         
         .subtitle {
             font-style: italic;
             margin-top: 5px;
+            font-size: 0.9em;
         }
         
-        #map-container {
+        #main-container {
             display: flex;
-            height: calc(100vh - 180px);
+            flex: 1;
+            overflow: hidden;
         }
         
         #map {
@@ -44,30 +53,29 @@
         #sidebar {
             width: 350px;
             background-color: #f5f5f5;
-            padding: 15px;
-            overflow-y: auto;
-            border-left: 1px solid #ddd;
             display: flex;
             flex-direction: column;
+            border-left: 1px solid #ddd;
+            overflow: hidden;
         }
         
         .search-container {
-            padding: 10px;
+            padding: 15px;
             background-color: #e6e6e6;
-            border-radius: 5px;
-            margin-bottom: 15px;
+            flex-shrink: 0;
         }
         
         #search-input {
             width: 100%;
-            padding: 8px;
+            padding: 8px 12px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            font-size: 0.9em;
             margin-bottom: 10px;
         }
         
         .filter-section {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         
         .filter-title {
@@ -77,13 +85,19 @@
             justify-content: space-between;
             align-items: center;
             cursor: pointer;
+            font-size: 0.9em;
+            padding: 5px;
+            background-color: #ddd;
+            border-radius: 3px;
         }
         
         .filter-options {
             display: none;
-            padding: 5px;
+            padding: 8px 5px;
             background-color: white;
-            border-radius: 4px;
+            border-radius: 0 0 4px 4px;
+            border: 1px solid #ddd;
+            border-top: none;
         }
         
         .filter-options.show {
@@ -91,42 +105,58 @@
         }
         
         .filter-option {
-            margin: 5px 0;
+            margin: 6px 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .filter-option input {
+            margin-right: 6px;
         }
         
         .filter-option label {
-            margin-left: 5px;
-            font-size: 0.9em;
+            font-size: 0.85em;
+            cursor: pointer;
+        }
+        
+        .project-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 15px 15px 15px;
         }
         
         .project-list {
-            flex: 1;
+            height: 100%;
             overflow-y: auto;
         }
         
         .project-item {
-            margin-bottom: 15px;
-            padding: 10px;
+            margin-bottom: 12px;
+            padding: 12px;
             background-color: white;
             border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             cursor: pointer;
+            transition: all 0.2s;
         }
         
         .project-item:hover {
             background-color: #e6f2ff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
         }
         
         .project-title {
             font-weight: bold;
             color: #003366;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
+            font-size: 0.95em;
         }
         
         .project-desc {
-            font-size: 0.9em;
+            font-size: 0.85em;
             color: #666;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            line-height: 1.4;
         }
         
         .project-meta {
@@ -134,15 +164,16 @@
             justify-content: space-between;
             font-size: 0.8em;
             color: #888;
+            margin-bottom: 5px;
         }
         
         .project-category {
             display: inline-block;
-            padding: 2px 6px;
+            padding: 3px 8px;
             border-radius: 3px;
             font-size: 0.75em;
             color: white;
-            margin-top: 5px;
+            font-weight: bold;
         }
         
         .category-infrastruttura {
@@ -177,23 +208,39 @@
             background-color: #003366;
             color: white;
             text-align: center;
-            padding: 10px;
+            padding: 8px;
             font-size: 0.8em;
+            flex-shrink: 0;
+        }
+        
+        .no-results {
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        
+        /* Stili per schermi più piccoli */
+        @media (max-width: 1024px) {
+            #sidebar {
+                width: 300px;
+            }
         }
         
         @media (max-width: 768px) {
-            #map-container {
+            #main-container {
                 flex-direction: column;
-                height: auto;
+            }
+            
+            #sidebar {
+                width: 100%;
+                height: 300px;
+                border-left: none;
+                border-top: 1px solid #ddd;
             }
             
             #map {
                 height: 400px;
-            }
-            
-            #sidebar {
-                width: auto;
-                height: 300px;
             }
         }
     </style>
@@ -204,12 +251,11 @@
         <div class="subtitle">Mappa interattiva dei progetti e problemi urbani</div>
     </header>
     
-    <div id="map-container">
+    <div id="main-container">
         <div id="map"></div>
         <div id="sidebar">
             <div class="search-container">
-                <h2>Ricerca Problemi</h2>
-                <input type="text" id="search-input" placeholder="Cerca per nome, luogo o descrizione...">
+                <input type="text" id="search-input" placeholder="Cerca problemi per nome, luogo o descrizione...">
                 
                 <div class="filter-section">
                     <div class="filter-title" onclick="toggleFilter('category-filter')">
@@ -279,8 +325,8 @@
                 </div>
             </div>
             
-            <div class="project-list" id="project-list">
-                <!-- I progetti verranno caricati qui dinamicamente -->
+            <div class="project-list-container">
+                <div class="project-list" id="project-list"></div>
             </div>
         </div>
     </div>
@@ -290,14 +336,13 @@
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
     <script>
         // Dati dei progetti/problemi
         const projectsData = [
             {
                 id: 1,
                 title: "Riqualificazione Area Ex AMIA",
-                description: "Trasformazione dell'ex area industriale in polo culturale e residenziale",
+                description: "Trasformazione dell'ex area industriale in polo culturale e residenziale. Problemi attuali: degrado strutture esistenti e inquinamento terreno.",
                 lat: 45.4386,
                 lng: 10.9926,
                 category: "edilizia",
@@ -308,7 +353,7 @@
             {
                 id: 2,
                 title: "Nuovo Ponte sull'Adige",
-                description: "Collegamento ciclopedonale tra Borgo Trento e Veronetta",
+                description: "Collegamento ciclopedonale tra Borgo Trento e Veronetta. Problema: traffico intenso durante i lavori.",
                 lat: 45.4427,
                 lng: 10.9982,
                 category: "infrastruttura",
@@ -319,7 +364,7 @@
             {
                 id: 3,
                 title: "Rigenerazione Porto San Pancrazio",
-                description: "Recupero dell'area portuale con spazi pubblici e servizi",
+                description: "Recupero dell'area portuale con spazi pubblici e servizi. Problema: allagamenti frequenti nell'area.",
                 lat: 45.4339,
                 lng: 10.9843,
                 category: "verde",
@@ -330,7 +375,7 @@
             {
                 id: 4,
                 title: "Pista ciclabile Circolare",
-                description: "Nuovo anello ciclabile di 15km intorno al centro storico",
+                description: "Nuovo anello ciclabile di 15km intorno al centro storico. Problema: interruzione in via XX Settembre.",
                 lat: 45.4482,
                 lng: 11.0034,
                 category: "mobilita",
@@ -341,7 +386,7 @@
             {
                 id: 5,
                 title: "Parco delle Mura Scaligere",
-                description: "Valorizzazione del sistema difensivo storico con percorsi turistici",
+                description: "Valorizzazione del sistema difensivo storico con percorsi turistici. Problema: illuminazione insufficiente.",
                 lat: 45.4256,
                 lng: 10.9765,
                 category: "verde",
@@ -352,7 +397,7 @@
             {
                 id: 6,
                 title: "Degrado Piazza delle Erbe",
-                description: "Interventi di riqualificazione per la pavimentazione danneggiata",
+                description: "Interventi di riqualificazione per la pavimentazione danneggiata. Problema: lastricato sconnesso e pericoloso.",
                 lat: 45.4434,
                 lng: 10.9980,
                 category: "infrastruttura",
@@ -363,18 +408,40 @@
             {
                 id: 7,
                 title: "Illuminazione pubblica insufficiente",
-                description: "Miglioramento illuminazione in via XX Settembre",
+                description: "Miglioramento illuminazione in via XX Settembre. Problema: punti luce non funzionanti.",
                 lat: 45.4402,
                 lng: 10.9876,
                 category: "infrastruttura",
                 status: "pianificato",
                 priority: "media",
                 date: "2023-07-22"
+            },
+            {
+                id: 8,
+                title: "Raccolta differenziata inefficiente",
+                description: "Problemi con i cassonetti in zona Borgo Milano. Sovraffollamento e ritardi nello svuotamento.",
+                lat: 45.4512,
+                lng: 10.9783,
+                category: "infrastruttura",
+                status: "in-corso",
+                priority: "media",
+                date: "2023-08-15"
+            },
+            {
+                id: 9,
+                title: "Rumore notturno in centro storico",
+                description: "Eccessivo rumore dai locali notturni dopo mezzanotte. Richiesta di interventi di mitigazione.",
+                lat: 45.4428,
+                lng: 10.9975,
+                category: "infrastruttura",
+                status: "pianificato",
+                priority: "bassa",
+                date: "2023-07-30"
             }
         ];
 
         // Inizializza la mappa centrata su Verona
-        const map = L.map('map').setView([45.4386, 10.9926], 13);
+        const map = L.map('map').setView([45.4386, 10.9926], 14);
         
         // Aggiungi il layer di OpenStreetMap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -417,7 +484,7 @@
             })
         };
 
-        // Aggiungi marker per i progetti
+        // Array per i marker
         const markers = [];
         const projectList = document.getElementById('project-list');
         
@@ -436,7 +503,7 @@
             projectList.innerHTML = '';
             
             if (projects.length === 0) {
-                projectList.innerHTML = '<div class="project-item">Nessun progetto trovato con i filtri selezionati</div>';
+                projectList.innerHTML = '<div class="no-results">Nessun problema trovato con i filtri selezionati</div>';
                 return;
             }
             
@@ -447,7 +514,11 @@
                 
                 // Formatta la data
                 const dateObj = new Date(project.date);
-                const formattedDate = dateObj.toLocaleDateString('it-IT');
+                const formattedDate = dateObj.toLocaleDateString('it-IT', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
                 
                 projectItem.innerHTML = `
                     <div class="project-title">${project.title}</div>
@@ -462,6 +533,12 @@
                 projectItem.addEventListener('click', () => {
                     map.setView([project.lat, project.lng], 16);
                     markers[project.id - 1].openPopup();
+                    
+                    // Evidenzia il progetto selezionato
+                    document.querySelectorAll('.project-item').forEach(item => {
+                        item.style.backgroundColor = 'white';
+                    });
+                    projectItem.style.backgroundColor = '#e6f2ff';
                 });
                 
                 projectList.appendChild(projectItem);
@@ -492,6 +569,12 @@
                 return matchesSearch && matchesCategory && matchesStatus && matchesPriority;
             });
             
+            // Ordina per priorità (alta, media, bassa)
+            filteredProjects.sort((a, b) => {
+                const priorityOrder = { alta: 1, media: 2, bassa: 3 };
+                return priorityOrder[a.priority] - priorityOrder[b.priority];
+            });
+            
             // Aggiorna la lista dei progetti
             renderProjects(filteredProjects);
             
@@ -503,9 +586,12 @@
         function updateMapMarkers(filteredProjects) {
             // Prima rimuovi tutti i marker esistenti
             markers.forEach(marker => {
-                map.removeLayer(marker);
+                if (marker) map.removeLayer(marker);
             });
             markers.length = 0;
+            
+            // Inizializza l'array markers con lunghezza fissa
+            projectsData.forEach(() => markers.push(null));
             
             // Aggiungi i nuovi marker per i progetti filtrati
             filteredProjects.forEach(project => {
@@ -517,7 +603,7 @@
                     ${project.description}<br><br>
                     <strong>Categoria:</strong> ${getCategoryLabel(project.category)}<br>
                     <strong>Stato:</strong> ${getStatusLabel(project.status)}<br>
-                    <strong>Priorità:</strong> ${project.priority}
+                    <strong>Priorità:</strong> ${project.priority === 'alta' ? '🟥 Alta' : project.priority === 'media' ? '🟨 Media' : '🟦 Bassa'}
                 `);
                 
                 markers[project.id - 1] = marker;
@@ -547,14 +633,21 @@
         // Inizializza l'applicazione
         document.addEventListener('DOMContentLoaded', () => {
             // Renderizza tutti i progetti inizialmente
-            renderProjects(projectsData);
-            updateMapMarkers(projectsData);
+            filterProjects();
             
             // Aggiungi event listener per la ricerca e i filtri
             document.getElementById('search-input').addEventListener('input', filterProjects);
             
             document.querySelectorAll('.filter-options input').forEach(input => {
                 input.addEventListener('change', filterProjects);
+            });
+            
+            // Apri tutti i filtri all'avvio
+            document.querySelectorAll('.filter-options').forEach(filter => {
+                filter.classList.add('show');
+                const icon = filter.previousElementSibling.querySelector('i');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
             });
             
             // Aggiungi layer per le zone di trasformazione
